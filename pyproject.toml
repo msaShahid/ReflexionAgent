@@ -9,25 +9,45 @@ description = "Production-ready Reflexion Agent with episodic + reflection memor
 requires-python = ">=3.11"
 license = { text = "MIT" }
 
-dependencies = [
-    "pydantic>=2.6.0",
-    "pydantic-settings>=2.2.0",
-    "openai>=1.20.0",
-    "anthropic>=0.25.0",
-    "httpx>=0.27.0",
-    "tenacity>=8.2.0",
-    "structlog>=24.1.0",
-    "rich>=13.7.0",
-    "tiktoken>=0.6.0",
-    "chromadb>=0.5.0",
-    "aiofiles>=23.2.0",
-    "python-dotenv>=1.0.0",
-    "orjson>=3.10.0",
-    "opentelemetry-api>=1.24.0",
-    "opentelemetry-sdk>=1.24.0",
-    "pyyaml>=6.0.0",
+
+authors = [
+    {name = "Mohammad Shahid", email = ""},
 ]
 
+dependencies = [
+    # Core dependencies - consider grouping by purpose with comments
+    # LLM Providers
+    "openai>=1.20.0",
+    "anthropic>=0.25.0",
+    
+    # Data & Validation
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    
+    # Vector Storage
+    "chromadb>=0.5.0",
+    
+    # Utilities
+    "tenacity>=8.2.0",  # For retry logic
+    "tiktoken>=0.6.0",  # For token counting
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.0",
+    "aiofiles>=23.2.0",  # Async file operations
+    "orjson>=3.10.0",  # Fast JSON
+    
+    # Networking
+    "httpx>=0.27.0",  # Async HTTP
+    
+    # Observability
+    "opentelemetry-api>=1.24.0",
+    "opentelemetry-sdk>=1.24.0",
+    
+    # Logging & Output
+    "structlog>=24.1.0",
+    "rich>=13.7.0",
+]
+
+# dependency groups
 [project.optional-dependencies]
 dev = [
     "pytest>=8.1.0",
@@ -36,27 +56,130 @@ dev = [
     "pytest-mock>=3.14.0",
     "mypy>=1.9.0",
     "ruff>=0.4.0",
+    "pre-commit>=3.7.0",  
+]
+
+# Add documentation dependencies
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocstrings[python]>=0.24.0",
+    "mkdocs-material>=9.5.0",
+]
+
+# Add monitoring/observability extras
+monitoring = [
+    "prometheus-client>=0.20.0",
+    "opentelemetry-exporter-otlp>=1.24.0",
+]
+
+# Add vector database extras 
+vectordb = [
+    "chromadb>=0.5.0",
+    "qdrant-client>=1.9.0",  # Optional alternative
 ]
 
 [project.scripts]
-# CLI: reflexion "your task here"
-reflexion = "reflexion_agent.main:main"
+reflexion = "reflexion_agent.cli:main"  
+reflexion-api = "reflexion_agent.api:serve"  
+
 
 [tool.hatch.build.targets.wheel]
-
 packages = ["src/reflexion_agent"]
+
+# Add hatch environment configurations
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest",
+    "pytest-cov",
+    "mypy",
+    "ruff",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest tests/ --cov=src/reflexion_agent --cov-report=term-missing"
+lint = "ruff check src/ tests/"
+fmt = "ruff format src/ tests/"
+typecheck = "mypy src/"
+
+[tool.hatch.envs.docs]
+dependencies = [
+    "mkdocs",
+    "mkdocstrings[python]",
+    "mkdocs-material",
+]
+
+[tool.hatch.envs.docs.scripts]
+build = "mkdocs build"
+serve = "mkdocs serve"
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+
+# More comprehensive ruff configuration
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "N",  # pep8-naming
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "SIM", # flake8-simplify
+    "ARG", # flake8-unused-arguments
+    "C4",  # flake8-comprehensions
+    "T20", # flake8-print
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["T20"]  # Allow prints in tests
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+disallow_any_unimported = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unreachable = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=src/reflexion_agent --cov-report=term-missing"
+addopts = "--cov=src/reflexion_agent --cov-report=term-missing --cov-report=html --cov-report=xml"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+# Add coverage configuration
+[tool.coverage.run]
+source = ["src/reflexion_agent"]
+omit = ["*/test_*", "*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
+
